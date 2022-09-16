@@ -1,4 +1,5 @@
 import 'package:merkle_tree/src/base_node.dart';
+import 'package:merkle_tree/src/compare_result.dart';
 import 'package:merkle_tree/src/leaf.dart';
 import 'package:merkle_tree/src/root.dart';
 
@@ -47,4 +48,56 @@ class MerkleTree<T extends BaseNode> {
 
   @override
   int get hashCode => hash.hashCode;
+
+  CompareResult diff(Object other) {
+    if (other is! MerkleTree) {
+      return CompareResult(
+          diffs: [],
+          equals: false,
+          canCompare: false,
+          message: "different types");
+    }
+
+    if (other.leafs.length != leafs.length) {
+      return CompareResult(
+          diffs: [],
+          equals: false,
+          canCompare: false,
+          message: "different leaf counts");
+    }
+
+    if (other.hash == hash) {
+      return CompareResult(
+        diffs: [],
+        equals: true,
+        canCompare: true,
+      );
+    }
+
+    return CompareResult(
+        diffs: _diff(root, other.root), equals: false, canCompare: true);
+  }
+
+  List<List<Leaf>> _diff(Root r1, Root r2) {
+    List<Leaf> d1 = [];
+    List<Leaf> d2 = [];
+
+    for (int i = 0; i < r1.children.length; i++) {
+      if (r1.children[i].hash == r2.children[i].hash) {
+        continue;
+      }
+      if (r1.children[i].hash != r2.children[i].hash) {
+        if (r1.children[i] is Leaf) {
+          d1.add(r1.children[i] as Leaf);
+          d2.add(r2.children[i] as Leaf);
+        } else {
+          final result = _diff(r1.children[i] as Root, r2.children[i] as Root);
+          d1.addAll(result.first);
+          d2.addAll(result.last);
+        }
+      }
+    }
+
+    return [d1, d2];
+  }
 }
